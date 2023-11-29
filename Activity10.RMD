@@ -1,0 +1,242 @@
+---
+title: "Activity10 - Reproducible RMD File"
+author: "Owen McInerney"
+date: "2023-11-27"
+output: 
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+### setup chunk
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r loadPackages, include=FALSE}
+### loadPackages chunk
+#Load packages with groundhog to improve stability
+library(groundhog)
+pkgs <- c("ggplot2", "dplyr", "googlesheets4", "tidyr", "knitr", "readxl")
+groundhog.library(pkgs, '2023-11-27') #Use the date that you started the project here
+
+```
+
+## Collatz Conjecture
+
+The Collats Conjecture asks whether repeating the same two arithmetic operations will transform every positive integer into 1.  We can express the Collatz Conjecture in the following way:
+
+if n is even: f(n) = n/2
+if n is odd: f(n) = 3n+1
+if n is one: stop
+
+Notice that the above function is recursive; that is, the function calls itself and continually evaluates itself until the stop occurs.  For example, consider the chain which yields:
+
+f(3) -> f(10) -> f(5) -> f(16) -> f(8) -> f(4) -> f(2) -> f(1)
+
+In this chain we can see that it took 7 iterations for the function to get 3 to 1.  In the following code, we will apply the collatz function to every number between 1 and 1000.  Then we will record how many iterations it takes for each number to reach 1.  After that, we will create a histogram of all the different number of iterations it took to reach 1.  We can see that the maximum number of iterations is around 175 and most numbers take less than 75 iterations to reach 1.
+
+```{r CollatzConjecture, echo=FALSE}
+### Collatz chunk
+# defining collatz function -- input of a number n and output of iterations it takes to reach 1
+
+collatz <- function(n, count=0){
+  if (n==1){
+    return(count)
+  }
+  else if (n%%2 == 0){
+    n <- (n/2)
+    return(collatz(n, count+1))
+  }
+  else {
+    n <- 3*n + 1
+    return(collatz(n, count+1))
+  }
+}
+
+# creating sequence from 1-1000 and applying collatz to each number in sequence
+
+n_seq = seq(1, 1000)
+collatz1to1000 <- sapply(
+  X=n_seq,
+  FUN=collatz
+)
+
+# create a histogram of how many iterations it takes to reach 1 for each number
+
+ggplot(
+  mapping = aes(x = collatz1to1000)
+) + geom_histogram() + 
+  labs(
+    x = "Iterations to reach 1",
+    y = "Count",
+    title = "Collatz Conjecture for numbers 1-1000") + theme_bw()
+
+```
+
+## Diamonds Data Visualizations
+
+The diamonds data set (from ggplot2) consists of cases of one diamond with attributes as its price, its quality of cut, its carat, clarity, depth, width, length, and height.
+
+Below is a histogram of different diamond prices.  We can see that as a diamond gets more expensive it becomes more scarce.
+
+```{r diamondsPriceHistogram, echo=FALSE}
+### diamomdsPriceHistogram chunk
+# Creating a histogram with price on the x-axis
+ggplot(
+  data = diamonds, 
+  mapping = aes(x = price),
+) + geom_histogram() +
+  labs(
+    x = "Price",
+    y = "Count",
+    title = "Distribution of Prices of Diamonds") +
+  theme_bw()
+```
+
+Through ggplot2, we can find how price, carat, and cut relate.  Through the scatter plot of carat on the x-axis, price on the y-axis, and cut as the color we see an exponential relationship between carat and price for all different types of cut.  We can also see that this is true for all types of diamonds, regardless of the cut.
+
+```{r diamondsCaratPriceScatterPlot, echo=FALSE}
+### diamondsCaratPriceScatterPlot chunk
+# Creating a scatter plot with carat on the x-axis and price on the y-axis and cut as the color
+ggplot(diamonds) + 
+  aes(x = carat, y = price, colour = cut) +
+  geom_point(shape = "circle small", size = 1.5) +
+  scale_color_hue(direction = 1) + 
+  labs(
+    x = "Carat",
+    y = "Price",
+    title = "Diamond Prices",
+    subtitle = "based on carat and cut",
+    color = "Cut"
+  ) + theme_bw()
+
+```
+
+## Creating Summary Tables for Diamonds Dataset
+
+We can also create summary tables using dplyr, knitr, and kableExtra.  Here is an example of a summary table of the diamonds dataset that shows the min, quintile one, quintile two, median, quintile three, quintile 4, max, mean, and standard deviation for the y-attribute of the diamonds, grouped by the quality of cut.
+
+```{r diamondsSumamaryTable, echo=FALSE}
+### diamondsSummaryTable chunk
+# Create a list of functions to apply across the y-column
+funx <- list(
+  min = ~min(.x, na.rm = TRUE),
+  Q1 = ~quantile(.x, probs = 0.20, na.rm = TRUE),
+  Q2 = ~quantile(.x, probs = 0.40, na.rm = TRUE),
+  median = ~median(.x, na.rm = TRUE),
+  Q3 = ~quantile(.x, probs = 0.60, na.rm = TRUE),
+  Q4 = ~quantile(.x, probs = 0.60, na.rm = TRUE),
+  max = ~max(.x, na.rm = TRUE),
+  mean = ~mean(.x, na.rm=TRUE),
+  std = ~sd(.x, na.rm=TRUE)
+)
+
+# Wrangle Data to only y-column, grouping by cut, and apply functions
+yDiamonds <- diamonds %>%
+  group_by(cut) %>% 
+  select(cut, y) %>%
+  summarize(
+    across(
+      .cols = where(is.numeric),
+      .fns = funx),
+    count = n()
+    )
+
+# Make summary data table presentable
+yDiamonds %>% 
+  kable(
+    booktabs = TRUE
+  )
+
+```
+
+## Stat 184 Course Review (Up to 2023-11-27)
+
+In Stat 184, so far we have gone through three phases.
+
+## Phase 1
+
+In phase 1, we learned the fundamentals of data science and the basics of R. Data types are the nature of
+how we choose to record some value. Examples would include integers, doubles, and strings. Data structures
+are ways in which we choose to organize data types, depending on the number of dimensions and data types
+to be stored. Examples of data structures are vectors and tables. Vectors are one dimensional and tables are
+two dimensional. We also learned about naming of objects. Nouns include objects such as vectors, constants,
+and parameters. Verbs take in inputs and return an output. We also learned how to name different nouns
+and functions. We can use camelCase to name nouns and snake_case to name functions.
+
+``` {r phaseOne, echo=FALSE}
+### phaseOne chunk
+
+# This is an example of the data type string.
+string1 <- "hello"
+
+# The following is an example of the data structure 'table'
+# Using head to show the first 5 rows and kable to make the table look cleaner
+kable(head(diamonds))
+
+# This is an example of naming the noun using camelCase and function verb using snake_case.
+
+# Set value of myNoun to one.
+myNoun <- 1
+
+# Define a function with one input and returning the input + 1
+add_one <- function(x){
+  return(x+1)
+}
+
+# Call add_one to myNoun
+add_one(myNoun)
+```
+
+## Phase Two
+
+In phase 2, we learned to tidy data. In tidy data, each row represents an individual case and each column
+has a name and houses the value of a specific attribute across all cases. The following code chunk wrangles armyMaritalData from the web and turns the cases into groups of soldiers with attributes as the groups pay
+grade, marital status, sex, and count of soldiers.
+```{r phaseTwo, include=FALSE}
+### phaseTwo chunk
+# Read army marital data from google sheets using googlesheets4 package
+armyMaritalData <- read_excel("Army_MaritalStatus.xlsx", range = "B8:M35")
+
+# Rename colnames to know which to select
+colnames(armyMaritalData) <- c("Pay_Grade", "SingleNoChildren_Male", "SingleNoChildren_Female",
+"del1","SingleWithChildren_Male",
+"SingleWithChildren_Female", "del2", "JointService_Male",
+"JointService_Female", "del3", "CivilianMar_Male",
+"CivilianMar_Female")
+
+# Select / Filter to only have individual cases, also mutate soldier instances to numeric
+armyMaritalGroupData <- armyMaritalData %>%
+select("Pay_Grade", "SingleNoChildren_Male", "SingleNoChildren_Female",
+"SingleWithChildren_Male", "SingleWithChildren_Female",
+"JointService_Male", "JointService_Female", "CivilianMar_Male",
+"CivilianMar_Female") %>%
+filter(Pay_Grade != "Pay Grade",
+Pay_Grade != "TOTAL ENLISTED",
+Pay_Grade != "TOTAL OFFICER")
+
+# Use pivot_longer to chase case from pay grade to groups of soldiers
+armyMaritalGroupData <- armyMaritalGroupData %>%
+pivot_longer(
+cols = !Pay_Grade,
+names_to = c("Marital_Status", "Sex"),
+names_sep = "_",
+values_to = "Count"
+)
+# Make summary data table presentable
+armyMaritalGroupData %>%
+tail()%>%
+kable(
+booktabs = TRUE
+)
+
+```
+
+\newpage
+# Code Appendix
+``` {r codeAppedix}
+#| ref.label = knitr::all_labels(),
+#| echo = TRUE,
+#| eval = FALSE
+```
